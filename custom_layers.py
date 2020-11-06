@@ -41,10 +41,10 @@ class SpectralNorm(tf.keras.layers.Wrapper):
         w = tf.reshape(self.w, [-1, self.w_shape[-1]])
         u = self.u
 
-        v = tf.math.l2_normalize(tf.matmul(u, w, transpose_b=True))
-        u = tf.math.l2_normalize(tf.matmul(v, w))
+        v = tf.math.l2_normalize(tf.linalg.matmul(u, w, transpose_b=True))
+        u = tf.math.l2_normalize(tf.linalg.matmul(v, w))
 
-        sigma = tf.matmul(tf.matmul(v, w), u, transpose_b=True)
+        sigma = tf.linalg.matmul(tf.matmul(v, w), u, transpose_b=True)
 
         self.w.assign(self.w / sigma)
         self.u.assign(u)

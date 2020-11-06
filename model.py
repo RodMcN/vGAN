@@ -37,7 +37,7 @@ class vGAN():
                 model.add(layers.UpSampling1D(size=stride))
                 l = layers.Conv1D(filters, 3, 1, 'same', kernel_initializer=initializers.he_normal, use_bias=bias)
         else:
-            l = layers.Conv1DTranspose(filters, 3, 2, 'same', kernel_initializer=initializers.he_normal, use_bias=bias)
+            l = layers.Conv1D(filters, 3, stride, 'same', kernel_initializer=initializers.he_normal, use_bias=bias)
 
         if self.normalise == 'spectral':
             model.add(SpectralNorm(l))
@@ -83,7 +83,7 @@ class vGAN():
 
         for i, f in enumerate(filters):
             if attn and (i == int(len(filters) * 0.3) or i == int(len(filters) * 0.75)):
-                model.add(SelfAttention1D(filters))
+                model.add(SelfAttention1D(f))
                 model.add(layers.LeakyReLU())
 
             stride = 2 if i < 3 else 1
