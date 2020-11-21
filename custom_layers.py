@@ -63,6 +63,8 @@ class SelfAttention1D(tf.keras.Model):
             self.g = layers.Conv1D(filters//8, 1, 1, 'same')
             self.h = layers.Conv1D(filters, 1, 1, 'same')
 
+        self.gamma = self.add_weight(initializer=tf.initializers.Zeros)
+
     def call(self, x):
         f_x = self.f(x)
         g_x = self.g(x)
@@ -71,4 +73,6 @@ class SelfAttention1D(tf.keras.Model):
         attn = tf.linalg.matmul(f_x, g_x, transpose_b=True)
         attn = tf.nn.softmax(attn)
 
-        return tf.linalg.matmul(attn, h_x)
+        attn = self.gamma * tf.linalg.matmul(attn, h_x)
+
+        return x + attn

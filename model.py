@@ -19,6 +19,8 @@ class vGAN():
 
         self.batch_size = batch_size
 
+        self.gp_weight = 10
+
         if opt == 'sgd':
             self.gen_opt = tf.keras.optimizers.SGD(1e-5, momentum=0.9,)
             self.disc_opt = tf.keras.optimizers.SGD(1e-5, momentum=0.9,)
@@ -57,13 +59,10 @@ class vGAN():
 
         filters = 128
         for i in range(int(upscales)):
-
+            self.add_conv_block(model, filters, 2, True)
             if self.attn and (i == int(upscales * 0.3) or i == int(upscales * 0.75)):
                 model.add(SelfAttention1D(filters))
                 model.add(layers.LeakyReLU())
-
-            self.add_conv_block(model, filters, 2, True)
-
             filters = max(32, filters//2)
 
         model.add(layers.Conv1D(1, 3, 1, 'same', kernel_initializer=initializers.he_normal))
@@ -98,9 +97,9 @@ class vGAN():
 
         self.discriminator = model
 
-    def gradient_penalty(self, real_imgs, fake_imgs):
-        r = tf.random.uniform([self.batch_size, 1], 0, 1)
-        interpolated = (r * real_imgs) + ((1-r) * fake_imgs)
+    def gradient_penalty(self, real_inp, fake_inp):
+        r = tf.random.uniform([self.batch_size, 1, 1], 0, 1)
+        interpolated = (r * real_inp) + ((1-r) * fake_inp)
 
         with tf.GradientTape() as tape:
             tape.watch(interpolated)
@@ -132,11 +131,16 @@ class vGAN():
         else:
             return tf.keras.losses.binary_crossentropy(tf.ones_like(fake_preds), fake_preds)
 
-    def disc_step(self, real_imgs, fake_imgs):
+    def disc_step(self, real_inp, fake_inp):
         with tf.GradientTape() as tape:
-            real_preds = self.discriminator(real_imgs, training=True)
-            fake_preds = self.discriminator(fake_imgs, training=True)
+            real_preds = self.discriminator(real_inp, training=True)
+            fake_preds = self.discriminator(fake_inp, training=True)
             loss = self.disc_loss(real_preds, fake_preds)
+
+            penalty = self.gradient_penalty(real_inp, fake_inp)
+
+            loss = loss + (self.gp_weight * penalty)
+
         grads = tape.gradient(loss, self.discriminator.trainable_variables)
 
         self.disc_opt.apply_gradients(zip(grads, self.discriminator.trainable_variables))
